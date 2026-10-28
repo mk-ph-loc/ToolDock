@@ -16,7 +16,7 @@ if ($LASTEXITCODE -eq 1) {
     git commit -m "v${Version}: floating, dock και υποστήριξη πολλών οθονών"
     if ($LASTEXITCODE -ne 0) { throw 'git commit failed' }
 } elseif ($LASTEXITCODE -ne 0) { throw 'git diff failed' }
-git rev-parse --verify "refs/tags/v$Version" 2>$null
+git rev-parse --verify --quiet "refs/tags/v$Version"
 if ($LASTEXITCODE -eq 0) { throw 'Το tag υπάρχει ήδη· δεν αντικαθίσταται' }
 git tag "v$Version"
 if ($LASTEXITCODE -ne 0) { throw 'git tag failed' }
