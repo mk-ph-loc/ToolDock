@@ -1,13 +1,16 @@
 # HANDOFF — ToolDock
-Τρέχουσα: v0.1.1 · 2026-10-28 · Δημιουργία: Perplexity (όχι πιστοποιημένη εκτέλεση Sonnet).
+
+Τρέχουσα έκδοση: v0.2.0 · 2026-10-28.
+
 ## Κατάσταση
-Πακέτο ενημέρωσης βασισμένο σε αναγνωσμένα αρχεία GitHub. Νέα διάταξη floating/dock και placement.
-Αδοκίμαστη από χρήστη: v0.1.1. Η v0.1.0 είχε αναφερθέντα προβλήματα και δεν θεωρείται πλήρως ελεγμένη.
-Το πλήρες suite θα τρέξει τοπικά από apply-update.py. GUI δεν δοκιμάστηκε εδώ.
+- S2 υλοποιήθηκε στο branch feature/s2-speech.
+- Tests με mocks, χωρίς δίκτυο/μικρόφωνο.
+
 ## Επόμενο
-Πρώτα docs/TESTS-v0.1.1.md. Μόνο μετά S2 v0.2.0 (μικρόφωνο/STT). Opus: όχι βάσει ROADMAP.
+- Τοπικές δοκιμές Windows από χρήστη.
+- PR review/merge.
+- Release v0.2.0 σε GitHub/Gitea.
+
 ## Παγίδες
-Πρώτη αναβάθμιση θέτει window.layout_version=1 και floating· επόμενες εκκινήσεις θυμούνται θέση.
-Μην αντικαταστήσετε τα διορθωμένα Browser/QuickActionsPlugin. Υφιστάμενα config.json/data δεν περιέχονται στο πακέτο.
-Εκκρεμούν παλιές ελλείψεις S1 (πλήρη modes, on_hotkey plugin API, autostart κ.ά.).
-Δεν έχει ενημερωθεί απομακρυσμένο repo. Project Files: απαιτείται χειροκίνητο αντίγραφο docs.
+- Προαιρετικές εξαρτήσεις: sounddevice, SpeechRecognition, faster-whisper.
+- Μην αλλάζεις δημοσιευμένα tags.

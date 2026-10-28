@@ -14,6 +14,8 @@ DEFAULTS: dict[str, Any] = {
               "topics": ["ΣΧΟΛΕΙΟ", "PROMPT", "TO-DO", "ΛΟΓΑΡΙΑΣΜΟΣ",
                          "ΥΠΕΝΘΥΜΙΣΗ", "ΔΟΚΙΜΕΣ", "ΠΡΟΓΡΑΜΜΑΤΙΣΜΟΣ", "SNIPPET"]},
     "quick_actions": {"downloads": True, "browser": True},
+    "speech": {"provider": "google", "language": "el-GR",
+               "whisper": {"model": "small"}},
     "autostart": False,
 }
 

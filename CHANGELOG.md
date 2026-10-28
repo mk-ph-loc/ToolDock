@@ -1,8 +1,6 @@
 # CHANGELOG
 
-## v0.1.0 — 2026-10-28
-- Αρχική υλοποίηση S1: σκελετός εφαρμογής, tray, modes, dock, single instance, config, σημειώσεις Base.txt/θεμάτων, γρήγορες ενέργειες, autostart.
-
-## [v0.1.1] — 2026-10-28
-- Floating, dock τρέχουσας οθόνης, ορατή Έξοδος, αποθήκευση θέσης.
-- Έκδοση υπό δοκιμή Windows. Δες docs/reports/v0.1.1-REPORT.md.
+## v0.2.0 — 2026-10-28
+- S2: μικρόφωνο, κοινό interface STT, Google Web Speech + faster-whisper (lazy), el-GR/en-US, γραμμή κατάστασης.
+- Προαιρετικές εξαρτήσεις σε requirements-optional.txt· χωρίς αυτόματη λήψη μοντέλου.
+- Tests με mocks, χωρίς δίκτυο ή μικρόφωνο.
