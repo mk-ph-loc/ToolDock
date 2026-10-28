@@ -12,6 +12,9 @@ class GoogleWebSpeechProvider(STTProvider):
 
     name = "google"
 
+    def __init__(self, config=None) -> None:
+        self.config = config
+
     def transcribe(self, audio_path: Path, language: str) -> str:
         """Αναγνωρίζει WAV αρχείο και επιστρέφει κείμενο."""
         try:
