@@ -1,0 +1,4 @@
+# Προαιρετικές εξαρτήσεις S2 — εγκατάσταση μόνο αν χρησιμοποιείται υπαγόρευση
+sounddevice
+SpeechRecognition
+faster-whisper

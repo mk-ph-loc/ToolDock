@@ -12,6 +12,7 @@ from tooldock.core.config import Config
 from tooldock.core.placement import place
 from tooldock.tools.text_notes import TextNotesPlugin
 from tooldock.tools.quick_actions.plugin import QuickActionsPlugin
+from tooldock.tools.dictation import DictationPlugin
 
 
 class Shell(QMainWindow):
@@ -33,7 +34,11 @@ class Shell(QMainWindow):
         self._timer = QTimer(self)
         self._timer.setSingleShot(True)
         self._timer.timeout.connect(self._remember)
-        self.plugins = [TextNotesPlugin(config), QuickActionsPlugin(config)]
+        self.plugins = [
+            TextNotesPlugin(config),
+            QuickActionsPlugin(config),
+            DictationPlugin(config),
+        ]
         self.stack = QStackedWidget()
         central = QWidget()
         layout = QVBoxLayout(central)
