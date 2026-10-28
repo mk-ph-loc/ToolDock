@@ -1,0 +1,6 @@
+{
+  "window": {"mode": "compact", "dock": "right", "always_on_top": true, "width": 360, "height": 520},
+  "notes": {"base_file": "data/Base.txt", "topics": ["ΣΧΟΛΕΙΟ","PROMPT","TO-DO","ΛΟΓΑΡΙΑΣΜΟΣ","ΥΠΕΝΘΥΜΙΣΗ","ΔΟΚΙΜΕΣ","ΠΡΟΓΡΑΜΜΑΤΙΣΜΟΣ","SNIPPET"]},
+  "quick_actions": {"downloads": true, "browser": true},
+  "autostart": false
+}
