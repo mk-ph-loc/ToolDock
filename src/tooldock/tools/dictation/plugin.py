@@ -2,20 +2,103 @@
 from __future__ import annotations
 
 import logging
-import tempfile
 import threading
-from pathlib import Path
-from typing import Callable
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QObject, Qt, Signal
 from PySide6.QtWidgets import (
     QComboBox, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget,
 )
 
 from tooldock.core.config import Config
-from tooldock.speech.base import STTProvider
 from tooldock.speech.factory import create_provider
 from tooldock.speech.microphone import record_to_wav
+
+
+class _DictationWidget(QWidget):
+    """Widget υπαγόρευσης με ασφαλή ενημέρωση κατάστασης από thread."""
+
+    status_changed = Signal(str)
+
+    def __init__(self, config: Config) -> None:
+        super().__init__()
+        self.config = config
+        self._busy = False
+
+        layout = QVBoxLayout(self)
+        row = QHBoxLayout()
+
+        self.provider = QComboBox()
+        self.provider.addItem("Google Web Speech", "google")
+        self.provider.addItem("faster-whisper (τοπικά)", "whisper")
+        self.provider.setCurrentIndex(max(
+            0, self.provider.findData(config.get("speech.provider", "google"))))
+        self.provider.currentIndexChanged.connect(self._save_provider)
+
+        self.language = QComboBox()
+        self.language.addItem("Ελληνικά", "el-GR")
+        self.language.addItem("English", "en-US")
+        self.language.setCurrentIndex(max(
+            0, self.language.findData(config.get("speech.language", "el-GR"))))
+        self.language.currentIndexChanged.connect(self._save_language)
+
+        self.microphone = QComboBox()
+        self.microphone.addItem("Προεπιλεγμένο μικρόφωνο", None)
+        try:
+            from tooldock.speech.microphone import list_input_devices
+            for device in list_input_devices():
+                self.microphone.addItem(device["name"], device["index"])
+        except Exception as exc:
+            self.microphone.addItem(f"Μη διαθέσιμα μικρόφωνα: {exc}", None)
+        self.microphone.currentIndexChanged.connect(self._save_microphone)
+
+        self.record_button = QPushButton("Ηχογράφηση")
+        self.record_button.clicked.connect(self.start_recording)
+
+        for widget in (self.provider, self.language, self.microphone, self.record_button):
+            row.addWidget(widget)
+
+        self.status = QLabel("Έτοιμο")
+        self.status.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        layout.addLayout(row)
+        layout.addWidget(self.status)
+        self.status_changed.connect(self.status.setText)
+
+    def _save_provider(self) -> None:
+        self.config.set("speech.provider", self.provider.currentData())
+        self.config.save()
+
+    def _save_language(self) -> None:
+        self.config.set("speech.language", self.language.currentData())
+        self.config.save()
+
+    def _save_microphone(self) -> None:
+        self.config.set("speech.microphone", self.microphone.currentData())
+        self.config.save()
+
+    def start_recording(self) -> None:
+        """Ξεκινά ηχογράφηση και αναγνώριση σε background thread."""
+        if self._busy:
+            return
+        self._busy = True
+        self.status_changed.emit("Ηχογράφηση…")
+        threading.Thread(target=self._run, daemon=True).start()
+
+    def _run(self) -> None:
+        """ΠΡΟΣΟΧΗ: εκτελείται σε thread· ενημερώνει το UI μέσω Signal."""
+        try:
+            device = self.config.get("speech.microphone", None)
+            wav_path = record_to_wav(device=device) 
+            self.status_changed.emit("Αναγνώριση…")
+            provider = create_provider(self.config)
+            text = provider.transcribe(
+                wav_path, self.config.get("speech.language", "el-GR"))
+            self.status_changed.emit(f"Κείμενο: {text or '(δεν αναγνωρίστηκε κείμενο)'}")
+        except Exception as exc:
+            logging.exception("Σφάλμα υπαγόρευσης")
+            self.status_changed.emit(f"Σφάλμα: {exc}")
+        finally:
+            self._busy = False
 
 
 class DictationPlugin:
@@ -26,65 +109,7 @@ class DictationPlugin:
 
     def __init__(self, config: Config) -> None:
         self.config = config
-        self._busy = False
 
     def build_widget(self, mode: str = "compact") -> QWidget:
         """Δημιουργεί το UI της υπαγόρευσης."""
-        widget = QWidget()
-        layout = QVBoxLayout(widget)
-        row = QHBoxLayout()
-        self.provider = QComboBox()
-        self.provider.addItem("Google Web Speech", "google")
-        self.provider.addItem("faster-whisper (τοπικά)", "whisper")
-        self.provider.setCurrentIndex(max(0, self.provider.findData(
-            self.config.get("speech.provider", "google"))))
-        self.provider.currentIndexChanged.connect(self._provider_changed)
-        self.language = QComboBox()
-        for label, code in (("Ελληνικά", "el-GR"), ("English", "en-US")):
-            self.language.addItem(label, code)
-        self.language.setCurrentIndex(max(0, self.language.findData(
-            self.config.get("speech.language", "el-GR"))))
-        self.language.currentIndexChanged.connect(self._language_changed)
-        self.record = QPushButton("Ηχογράφηση")
-        self.record.clicked.connect(self.start_recording)
-        for item in (self.provider, self.language, self.record):
-            row.addWidget(item)
-        self.status = QLabel("Έτοιμο")
-        self.status.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addLayout(row)
-        layout.addWidget(self.status)
-        return widget
-
-    def set_status(self, text: str) -> None:
-        """Ενημερώνει τη γραμμή κατάστασης."""
-        self.status.setText(text)
-
-    def _provider_changed(self) -> None:
-        self.config.set("speech.provider", self.provider.currentData())
-        self.config.save()
-
-    def _language_changed(self) -> None:
-        self.config.set("speech.language", self.language.currentData())
-        self.config.save()
-
-    def start_recording(self) -> None:
-        """Ξεκινά ηχογράφηση και αναγνώριση σε background thread."""
-        if self._busy:
-            return
-        self._busy = True
-        self.set_status("Ηχογράφηση…")
-        threading.Thread(target=self._run, daemon=True).start()
-
-    def _run(self) -> None:
-        """ΠΡΟΣΟΧΗ: εκτελείται σε thread· ενημερώνει UI μέσω QTimer."""
-        from PySide6.QtCore import QTimer
-        try:
-            wav = record_to_wav()
-            provider = create_provider(self.config)
-            text = provider.transcribe(wav, self.config.get("speech.language", "el-GR"))
-            QTimer.singleShot(0, lambda: self.set_status(f"Κείμενο: {text[:80]}"))
-        except Exception as exc:  # noqa: BLE001
-            logging.exception("Σφάλμα υπαγόρευσης")
-            QTimer.singleShot(0, lambda: self.set_status(f"Σφάλμα: {exc}"))
-        finally:
-            self._busy = False
+        return _DictationWidget(self.config)
