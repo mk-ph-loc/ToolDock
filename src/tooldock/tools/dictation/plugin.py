@@ -1,4 +1,4 @@
-"""Plugin υπαγόρευσης S2: μικρόφωνο, πάροχοι STT και γραμμή κατάστασης."""
+"""Plugin υπαγόρευσης S2: μικρόφωνο, πάροχοι STT και live γραμμή κατάστασης."""
 from __future__ import annotations
 
 import logging
@@ -11,18 +11,20 @@ from PySide6.QtWidgets import (
 
 from tooldock.core.config import Config
 from tooldock.speech.factory import create_provider
-from tooldock.speech.microphone import record_to_wav
+from tooldock.speech.microphone import list_input_devices, record_to_wav
 
 
 class _DictationWidget(QWidget):
-    """Widget υπαγόρευσης με ασφαλή ενημέρωση κατάστασης από thread."""
+    """Widget υπαγόρευσης με live μερική αναγνώριση."""
 
     status_changed = Signal(str)
+    finished = Signal(str)
 
     def __init__(self, config: Config) -> None:
         super().__init__()
         self.config = config
         self._busy = False
+        self._stop_event = threading.Event()
 
         layout = QVBoxLayout(self)
         row = QHBoxLayout()
@@ -44,25 +46,26 @@ class _DictationWidget(QWidget):
         self.microphone = QComboBox()
         self.microphone.addItem("Προεπιλεγμένο μικρόφωνο", None)
         try:
-            from tooldock.speech.microphone import list_input_devices
             for device in list_input_devices():
                 self.microphone.addItem(device["name"], device["index"])
         except Exception as exc:
             self.microphone.addItem(f"Μη διαθέσιμα μικρόφωνα: {exc}", None)
         self.microphone.currentIndexChanged.connect(self._save_microphone)
 
-        self.record_button = QPushButton("Ηχογράφηση")
-        self.record_button.clicked.connect(self.start_recording)
+        self.record_button = QPushButton("Έναρξη")
+        self.record_button.clicked.connect(self.toggle_recording)
 
         for widget in (self.provider, self.language, self.microphone, self.record_button):
             row.addWidget(widget)
 
         self.status = QLabel("Έτοιμο")
         self.status.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.status.setWordWrap(True)
 
         layout.addLayout(row)
         layout.addWidget(self.status)
         self.status_changed.connect(self.status.setText)
+        self.finished.connect(self._on_finished)
 
     def _save_provider(self) -> None:
         self.config.set("speech.provider", self.provider.currentData())
@@ -76,33 +79,47 @@ class _DictationWidget(QWidget):
         self.config.set("speech.microphone", self.microphone.currentData())
         self.config.save()
 
-    def start_recording(self) -> None:
-        """Ξεκινά ηχογράφηση και αναγνώριση σε background thread."""
+    def toggle_recording(self) -> None:
+        """Ξεκινά ή διακόπτει τη ζωντανή υπαγόρευση."""
         if self._busy:
+            self._stop_event.set()
+            self.status_changed.emit("Διακοπή…")
             return
         self._busy = True
-        self.status_changed.emit("Ηχογράφηση…")
+        self._stop_event.clear()
+        self.record_button.setText("Διακοπή")
+        self.status_changed.emit("Ακούω… μίλα")
         threading.Thread(target=self._run, daemon=True).start()
 
     def _run(self) -> None:
-        """ΠΡΟΣΟΧΗ: εκτελείται σε thread· ενημερώνει το UI μέσω Signal."""
+        """ΠΡΟΣΟΧΗ: εκτελείται σε thread· ενημερώνει το UI μέσω Signals."""
+        texts: list[str] = []
         try:
             device = self.config.get("speech.microphone", None)
-            wav_path = record_to_wav(device=device) 
-            self.status_changed.emit("Αναγνώριση…")
+            language = self.config.get("speech.language", "el-GR")
             provider = create_provider(self.config)
-            text = provider.transcribe(
-                wav_path, self.config.get("speech.language", "el-GR"))
-            self.status_changed.emit(f"Κείμενο: {text or '(δεν αναγνωρίστηκε κείμενο)'}")
+            while not self._stop_event.is_set():
+                wav_path = record_to_wav(seconds=2, device=device)
+                text = provider.transcribe(wav_path, language).strip()
+                if text:
+                    texts.append(text)
+                    self.status_changed.emit("Μερικό: " + " ".join(texts))
         except Exception as exc:
-            logging.exception("Σφάλμα υπαγόρευσης")
-            self.status_changed.emit(f"Σφάλμα: {exc}")
-        finally:
-            self._busy = False
+            logging.exception("Σφάλμα ζωντανής υπαγόρευσης")
+            self.finished.emit(f"Σφάλμα: {exc}")
+            return
+        final_text = " ".join(texts).strip()
+        self.finished.emit(final_text or "Δεν αναγνωρίστηκε κείμενο")
+
+    def _on_finished(self, text: str) -> None:
+        """Επαναφέρει το κουμπί και εμφανίζει το τελικό κείμενο."""
+        self._busy = False
+        self.record_button.setText("Έναρξη")
+        self.status.setText(text if not text.startswith("Μερικό:") else text)
 
 
 class DictationPlugin:
-    """Υπαγόρευση με επιλογή πάροχου και γλώσσας."""
+    """Υπαγόρευση με επιλογή πάροχου, γλώσσας και μικροφώνου."""
 
     name = "dictation"
     icon = "🎤"
