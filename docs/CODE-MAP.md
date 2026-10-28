@@ -7,3 +7,7 @@
 - `src/tooldock/ui/shell.py` — tray, modes, dock, always-on-top.
 - `src/tooldock/ui/settings.py` — ρυθμίσεις, autostart, συντόμευση.
 - `src/tooldock/tools/` — plugins (σκελετός S1).
+
+- core/placement.py: καθαρή γεωμετρία δύο οθονών.
+- scripts/package.py: πλήρες zip χωρίς δεδομένα.
+- tests/test_placement.py: επτά περιπτώσεις γεωμετρίας.

@@ -1,17 +1,13 @@
-# HANDOFF — μετά το S1 (v0.1.0)
-
-## Τι έγινε
-- Πλήρης δομή repo, σκελετός plugins, tray, 3 modes, dock, always-on-top, single instance.
-- Config + δημιουργία `data/Base.txt` και αρχείων θεμάτων.
-- Πλαίσιο κειμένου + OK/Enter → clipboard + Base.txt + αρχείο θέματος (μορφή §5).
-- Notepad, Downloads, Browser, autostart, συντόμευση επιφάνειας.
-- Tests: config, storage, textnorm.
-
-## Επόμενο (S2)
-- Μικρόφωνο και interface παρόχων STT.
-- Google Web Speech + faster-whisper, el-GR/en-US.
-- Γραμμή κατάστασης και ένδειξη δραστηριότητας.
-
-## Γνωστά σημεία
-- Τα «3 modes» είναι θεμελιωμένα ως plugin tabs/stack· το πλήρες UI ανά mode επεκτείνεται στο S2+.
-- Το tray δεν έχει ακόμα custom εικονίδιο.
+# HANDOFF — ToolDock
+Τρέχουσα: v0.1.1 · 2026-10-28 · Δημιουργία: Perplexity (όχι πιστοποιημένη εκτέλεση Sonnet).
+## Κατάσταση
+Πακέτο ενημέρωσης βασισμένο σε αναγνωσμένα αρχεία GitHub. Νέα διάταξη floating/dock και placement.
+Αδοκίμαστη από χρήστη: v0.1.1. Η v0.1.0 είχε αναφερθέντα προβλήματα και δεν θεωρείται πλήρως ελεγμένη.
+Το πλήρες suite θα τρέξει τοπικά από apply-update.py. GUI δεν δοκιμάστηκε εδώ.
+## Επόμενο
+Πρώτα docs/TESTS-v0.1.1.md. Μόνο μετά S2 v0.2.0 (μικρόφωνο/STT). Opus: όχι βάσει ROADMAP.
+## Παγίδες
+Πρώτη αναβάθμιση θέτει window.layout_version=1 και floating· επόμενες εκκινήσεις θυμούνται θέση.
+Μην αντικαταστήσετε τα διορθωμένα Browser/QuickActionsPlugin. Υφιστάμενα config.json/data δεν περιέχονται στο πακέτο.
+Εκκρεμούν παλιές ελλείψεις S1 (πλήρη modes, on_hotkey plugin API, autostart κ.ά.).
+Δεν έχει ενημερωθεί απομακρυσμένο repo. Project Files: απαιτείται χειροκίνητο αντίγραφο docs.

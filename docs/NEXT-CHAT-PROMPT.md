@@ -1,8 +1,6 @@
-# NEXT-CHAT-PROMPT — S2 → v0.2.0
-
-Συνέχισε ToolDock από v0.1.0. Υλοποίησε ΜΟΝΟ το S2 του `docs/ROADMAP.md`:
-- Interface παρόχων STT (`speech/`), Google Web Speech + faster-whisper.
-- Μικρόφωνο, ηχογράφηση πάτα-μίλα, γλώσσες el-GR/en-US.
-- Γραμμή κατάστασης και ένδειξη δραστηριότητας στο tray/plugin.
-- Ρυθμίσεις παρόχου/γλώσσας στο config.json + GUI.
-- Tests για νέα modules. Release v0.2.0 με πλήρες Definition of Done.
+ΣΥΝΕΧΕΙΑ ToolDock. Τρέχουσα v0.1.1, αδοκίμαστη μέχρι να συμπληρωθεί TESTS-v0.1.1.md.
+Διάβασε AGENTS.md, HANDOFF.md, ROADMAP.md, DECISIONS.md και report v0.1.1.
+Πρώτα αξιολόγησε αποτελέσματα δύο οθονών, DPI, αποσύνδεσης οθόνης και regression tests.
+Μην δηλώσεις ολοκληρωμένο DoD χωρίς πλήρες τοπικό suite και δοκιμή GUI.
+Έπειτα S2/v0.2.0 μόνο κατόπιν ελέγχου εκκρεμοτήτων S1. Προβλεπόμενο μοντέλο: Sonnet.
+Αποτελέσματα χρήστη: <συμπλήρωση>.

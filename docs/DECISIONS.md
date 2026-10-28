@@ -8,3 +8,6 @@
 | Δ4 | Δεδομένα | `data/` portable δίπλα στην εφαρμογή |
 | Δ5 | Πάροχοι v0.2 | Google Web Speech + faster-whisper |
 | Δ6 | Ρυθμίσεις | config.json + GUI |
+
+## v0.1.1
+Δες v0.1.1-CHANGES.md: όλες οι επιλογές [Π] εγκρίθηκαν.
