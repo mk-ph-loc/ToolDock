@@ -15,6 +15,7 @@ DEFAULTS: dict[str, Any] = {
                          "ΥΠΕΝΘΥΜΙΣΗ", "ΔΟΚΙΜΕΣ", "ΠΡΟΓΡΑΜΜΑΤΙΣΜΟΣ", "SNIPPET"]},
     "quick_actions": {"downloads": True, "browser": True},
     "speech": {"provider": "google", "language": "el-GR",
+               "mode": "live", "web_service": "speechtexter",
                "whisper": {"model": "small"}},
     "autostart": False,
 }
