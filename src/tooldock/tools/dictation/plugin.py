@@ -1,49 +1,30 @@
-"""Plugin υπαγόρευσης S2: προφίλ, live/διάστημα, πάροχοι STT και Ιστός."""
+"""Plugin υπαγόρευσης S2: live/διάστημα, πάροχοι STT και Ιστός."""
 from __future__ import annotations
 
 import logging
 import threading
+import webbrowser
 
-from PySide6.QtCore import Qt, QUrl, Signal
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QDesktopServices
+from PySide6.QtCore import QUrl
 from PySide6.QtWidgets import (
-    QApplication, QComboBox, QDialog, QHBoxLayout, QLabel, QLineEdit,
-    QPushButton, QVBoxLayout, QWidget,
+    QApplication, QComboBox, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget,
 )
 
 from tooldock.core.config import Config
 from tooldock.speech.factory import create_provider
 from tooldock.speech.microphone import list_input_devices, record_to_wav
 
-DEFAULT_WEB_SERVICES = [
-    {"key": "speechtexter", "name": "SpeechTexter", "url": "https://www.speechtexter.com/"},
-    {"key": "speechnotes", "name": "SpeechNotes", "url": "https://speechnotes.co/"},
-    {"key": "dictation", "name": "Dictation", "url": "https://dictation.io/speech"},
-]
-
-
-class _WebBrowserDialog(QDialog):
-    """Ενσωματωμένο browser για υπηρεσίες υπαγόρευσης (lazy QWebEngineView)."""
-
-    def __init__(self, url: str, parent=None) -> None:
-        super().__init__(parent)
-        self.setWindowTitle("ToolDock — Υπηρεσία υπαγόρευσης")
-        self.resize(900, 650)
-        layout = QVBoxLayout(self)
-        try:
-            from PySide6.QtWebEngineWidgets import QWebEngineView
-            browser = QWebEngineView(self)
-            browser.setUrl(QUrl(url))
-            layout.addWidget(browser)
-        except ImportError as exc:
-            layout.addWidget(QLabel(
-                "Λείπει το PySide6-WebEngine.\n"
-                "Εγκατάσταση: pip install PySide6-WebEngine\n\n"
-                f"URL: {url}\n\nΣφάλμα: {exc}"))
+WEB_SERVICES = {
+    "speechtexter": ("SpeechTexter", "https://www.speechtexter.com/"),
+    "speechnotes": ("SpeechNotes", "https://speechnotes.co/"),
+    "dictation": ("Dictation", "https://dictation.io/speech"),
+}
 
 
 class _DictationWidget(QWidget):
-    """Widget υπαγόρευσης με προφίλ, live/διάστημα και Ιστό."""
+    """Widget υπαγόρευσης με live/διάστημα και πάροχο Ιστός."""
 
     status_changed = Signal(str)
     finished = Signal(str)
@@ -56,12 +37,6 @@ class _DictationWidget(QWidget):
 
         layout = QVBoxLayout(self)
         row = QHBoxLayout()
-
-        self.profile = QComboBox()
-        self._reload_profiles()
-        self.profile.currentIndexChanged.connect(self._apply_profile)
-        self.save_profile = QPushButton("Αποθήκευση προφίλ")
-        self.save_profile.clicked.connect(self._save_profile)
 
         self.provider = QComboBox()
         self.provider.addItem("Google Web Speech", "google")
@@ -95,25 +70,26 @@ class _DictationWidget(QWidget):
         self.microphone.currentIndexChanged.connect(self._microphone_changed)
 
         self.web_service = QComboBox()
-        self._reload_web_services()
+        for key, (label, _url) in WEB_SERVICES.items():
+            self.web_service.addItem(label, key)
+        self.web_service.setCurrentIndex(max(
+            0, self.web_service.findData(config.get("speech.web_service", "speechtexter"))))
         self.web_service.currentIndexChanged.connect(self._web_service_changed)
 
-        self.embed_browser = QPushButton("Ενσωματωμένο browser")
-        self.embed_browser.clicked.connect(self.open_embedded_browser)
-        self.open_web = QPushButton("Άνοιγμα σε browser")
-        self.open_web.clicked.connect(self.open_external_browser)
+        self.open_web = QPushButton("Άνοιγμα υπηρεσίας")
+        self.open_web.clicked.connect(self.open_web_service)
         self.paste_web = QPushButton("Λήψη από clipboard")
         self.paste_web.clicked.connect(self.paste_from_clipboard)
 
         self.record_button = QPushButton("Έναρξη")
         self.record_button.clicked.connect(self.toggle_recording)
 
-        for widget in (self.profile, self.save_profile, self.provider, self.mode,
-                       self.language, self.microphone, self.record_button):
+        for widget in (self.provider, self.mode, self.language, self.microphone,
+                       self.record_button):
             row.addWidget(widget)
 
         web_row = QHBoxLayout()
-        for widget in (self.web_service, self.embed_browser, self.open_web, self.paste_web):
+        for widget in (self.web_service, self.open_web, self.paste_web):
             web_row.addWidget(widget)
 
         self.status = QLabel("Έτοιμο")
@@ -126,56 +102,6 @@ class _DictationWidget(QWidget):
         self.status_changed.connect(self.status.setText)
         self.finished.connect(self._on_finished)
         self._update_mode_visibility()
-
-    def _web_services(self) -> list[dict]:
-        return self.config.get("speech.web_services", DEFAULT_WEB_SERVICES)
-
-    def _reload_web_services(self) -> None:
-        self.web_service.clear()
-        for service in self._web_services():
-            self.web_service.addItem(service["name"], service["key"])
-        self.web_service.setCurrentIndex(max(
-            0, self.web_service.findData(self.config.get("speech.web_service", "speechtexter"))))
-
-    def _reload_profiles(self) -> None:
-        self.profile.clear()
-        self.profile.addItem("— Χωρίς προφίλ —", None)
-        for name in self.config.get("speech.profiles", {}):
-            self.profile.addItem(name, name)
-
-    def _apply_profile(self) -> None:
-        name = self.profile.currentData()
-        if not name:
-            return
-        data = self.config.get(f"speech.profiles.{name}", {})
-        if not data:
-            return
-        for combo, key in ((self.provider, "provider"), (self.mode, "mode"),
-                           (self.language, "language"), (self.microphone, "microphone"),
-                           (self.web_service, "web_service")):
-            if key in data:
-                index = combo.findData(data[key])
-                if index >= 0:
-                    combo.setCurrentIndex(index)
-        self.status_changed.emit(f"Εφαρμόστηκε προφίλ: {name}")
-
-    def _save_profile(self) -> None:
-        from PySide6.QtWidgets import QInputDialog
-        name, ok = QInputDialog.getText(self, "Αποθήκευση προφίλ", "Όνομα προφίλ:")
-        if not ok or not name.strip():
-            return
-        name = name.strip()
-        self.config.set(f"speech.profiles.{name}", {
-            "provider": self.provider.currentData(),
-            "mode": self.mode.currentData(),
-            "language": self.language.currentData(),
-            "microphone": self.microphone.currentData(),
-            "web_service": self.web_service.currentData(),
-        })
-        self.config.save()
-        self._reload_profiles()
-        self.profile.setCurrentIndex(max(0, self.profile.findData(name)))
-        self.status_changed.emit(f"Αποθηκεύτηκε προφίλ: {name}")
 
     def _provider_changed(self) -> None:
         self.config.set("speech.provider", self.provider.currentData())
@@ -198,28 +124,19 @@ class _DictationWidget(QWidget):
         self.config.set("speech.web_service", self.web_service.currentData())
         self.config.save()
 
-    def _current_service_url(self) -> str:
-        key = self.web_service.currentData()
-        for service in self._web_services():
-            if service["key"] == key:
-                return service["url"]
-        return "https://www.speechtexter.com/"
-
     def _update_mode_visibility(self) -> None:
         is_web = self.provider.currentData() == "web"
-        for widget in (self.web_service, self.embed_browser, self.open_web, self.paste_web):
-            widget.setVisible(is_web)
+        self.web_service.setVisible(is_web)
+        self.open_web.setVisible(is_web)
+        self.paste_web.setVisible(is_web)
         self.record_button.setVisible(not is_web)
         self.mode.setVisible(not is_web)
 
-    def open_embedded_browser(self) -> None:
-        """Ανοίγει την υπηρεσία σε ενσωματωμένο browser (lazy QWebEngineView)."""
-        dialog = _WebBrowserDialog(self._current_service_url(), self)
-        dialog.exec()
-
-    def open_external_browser(self) -> None:
-        """Ανοίγει την υπηρεσία στον προεπιλεγμένο browser."""
-        QDesktopServices.openUrl(QUrl(self._current_service_url()))
+    def open_web_service(self) -> None:
+        """Ανοίγει την επιλεγμένη υπηρεσία στον browser."""
+        key = self.web_service.currentData()
+        _label, url = WEB_SERVICES.get(key, ("SpeechTexter", "https://www.speechtexter.com/"))
+        QDesktopServices.openUrl(QUrl(url))
         self.status_changed.emit("Μίλα στην υπηρεσία και μετά πάτησε «Λήψη από clipboard».")
 
     def paste_from_clipboard(self) -> None:
@@ -261,7 +178,8 @@ class _DictationWidget(QWidget):
                         text = provider.transcribe(wav_path, language).strip()
                     except Exception as exc:
                         logging.warning("Σφάλμα τμήματος: %s", exc)
-                        self.status_changed.emit(f"Σφάλμα τμήματος ({exc}) — συνεχίζω…")
+                        self.status_changed.emit(
+                            f"Σφάλμα τμήματος ({exc}) — συνεχίζω…")
                         continue
                     if text:
                         texts.append(text)
@@ -281,7 +199,7 @@ class _DictationWidget(QWidget):
 
 
 class DictationPlugin:
-    """Υπαγόρευση με προφίλ, πάροχους STT και ενσωματωμένο browser."""
+    """Υπαγόρευση με επιλογή πάροχου, γλώσσας, μικροφώνου και λειτουργίας."""
 
     name = "dictation"
     icon = "🎤"

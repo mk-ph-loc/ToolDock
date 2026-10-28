@@ -14,17 +14,9 @@ DEFAULTS: dict[str, Any] = {
               "topics": ["ΣΧΟΛΕΙΟ", "PROMPT", "TO-DO", "ΛΟΓΑΡΙΑΣΜΟΣ",
                          "ΥΠΕΝΘΥΜΙΣΗ", "ΔΟΚΙΜΕΣ", "ΠΡΟΓΡΑΜΜΑΤΙΣΜΟΣ", "SNIPPET"]},
     "quick_actions": {"downloads": True, "browser": True},
-    "speech": {
-        "provider": "google", "language": "el-GR",
-        "mode": "live", "web_service": "speechtexter",
-        "whisper": {"model": "small"},
-        "profiles": {},
-        "web_services": [
-            {"key": "speechtexter", "name": "SpeechTexter", "url": "https://www.speechtexter.com/"},
-            {"key": "speechnotes", "name": "SpeechNotes", "url": "https://speechnotes.co/"},
-            {"key": "dictation", "name": "Dictation", "url": "https://dictation.io/speech"},
-        ],
-    },
+    "speech": {"provider": "google", "language": "el-GR",
+               "mode": "live", "web_service": "speechtexter",
+               "whisper": {"model": "small"}},
     "autostart": False,
 }
 
